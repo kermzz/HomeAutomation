@@ -3,13 +3,13 @@
 #include <ESP8266WiFi.h>
 int servoPin1 = D0;
 int servoPin2 = D1;
-String state;
+String message;
 char* control = "0";
 Servo servo1;
 Servo servo2;  
 #define WLAN_SSID "RKKJ"
 #define WLAN_PASS "pikadpasswordidpididheadolema"
-#define mqtt_server "192.168.1.8"
+#define mqtt_server "192.168.1.201"
 #define mqtt_user "kardinad"
 #define mqtt_password "kardinad"
 char* kardinad = "kodu/kermz/kardinad";
@@ -77,12 +77,6 @@ void loop() {
 
   //MUST delay to allow ESP8266 WIFI functions to run
   delay(10); 
-  /*servo.attach(servoPin);
-  servo.write(60);
-  delay(800);
-  servo.write(0);
-  delay(800);
-  servo.detach();*/
 }
 
 String macToStr(const uint8_t* mac){
@@ -96,39 +90,46 @@ String macToStr(const uint8_t* mac){
       result += ':';
     }
   }
-
   return result;
 }
 void callback(char* topic, byte* payload, unsigned int length) {
 
   //convert topic to string to make it easier to work with
   String topicStr = topic; 
-  state = "";
+  message = "";
   //Print out some debugging info
   Serial.println("Callback update.");
   Serial.print("Topic: ");
   Serial.println(topicStr);
   for(int i = 0; i < length; i++){
-    state += (char)payload[i];
+    message += (char)payload[i];
   }
-  Serial.print(state);
-    if(state == "Give current state")
-    {      
-      client.publish("kodu/kermz/kardinad/currentstate", control);
-    }
+
+  Serial.print(message);
+
+  if(message == "Give current state")
+  {      
+    client.publish("kodu/kermz/kardinad/currentstate", control);
+  }
  
  
   //turn the light on if the payload is '1' and publish to the MQTT server a confirmation message
-  if(state == "kardin lahti"){
-    if(control == "0"){
+  if(message == "kardin lahti")
+  {
+    if(control == "0")
+    {
       client.publish("kodu/kermz/kardinad/state", "Avan kardinaid");
+
       servo1.attach(servoPin1);
-      servo2.attach(servoPin2);
-      servo1.write(0);
-      servo2.write(0);
-      delay(1000);
+      servo1.write(180);
+      delay(1400);
       servo1.detach();
+      
+      servo2.attach(servoPin2);
+      servo2.write(180);
+      delay(1400);
       servo2.detach();
+
       control = "1";
       client.publish("kodu/kermz/kardinad/state", "Kardinad on lahti");
     }
@@ -139,24 +140,58 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 
   //turn the light off if the payload is '0' and publish to the MQTT server a confirmation message
-  else if (state == "kardin kinni"){
+  else if (message == "kardin kinni")
+  {
     if(control == "1")
     {
       client.publish("kodu/kermz/kardinad/state", "Sulgen kardinaid");
+
       servo1.attach(servoPin1);
-      servo2.attach(servoPin2);
-      servo1.write(180);
-      servo2.write(180);
-      delay(1000);
+      servo1.write(0);
+      delay(1400);
       servo1.detach();
+
+      servo2.attach(servoPin2);
+      servo2.write(0);
+      delay(1400);
       servo2.detach();
+
       control = "0";
       client.publish("kodu/kermz/kardinad/state", "Kardinad on kinni");
-    }
+    } 
     else 
     {
       return;
     }
+  }    
+  // For calibrating curtains
+  else if (message == "1a"){
+    servo1.attach(servoPin1);
+    servo1.write(180);
+    delay(100);
+    servo1.detach();
   }
-
+  else if (message == "1k"){
+    servo1.attach(servoPin1);
+    servo1.write(0);
+    delay(100);
+    servo1.detach();      
+  }
+  else if (message == "2a"){
+    servo2.attach(servoPin2);
+    servo2.write(180);
+    delay(100);
+    servo2.detach();      
+  }
+  else if (message == "2k"){
+    servo2.attach(servoPin2);
+    servo2.write(0);
+    delay(100);
+    servo2.detach();      
+  }
+  else 
+  {
+    return;
+  }
 }
+
